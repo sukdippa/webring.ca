@@ -3,6 +3,7 @@ import type { Bindings } from './types'
 import Layout from './templates/Layout'
 import landing from './routes/landing'
 import directory from './routes/directory'
+import join from './routes/join'
 import redirect from './routes/redirect'
 import embed from './routes/embed'
 import api from './routes/api'
@@ -13,6 +14,7 @@ const app = new Hono<{ Bindings: Bindings }>()
 
 app.route('/', landing)
 app.route('/', directory)
+app.route('/', join)
 app.route('/', redirect)
 app.route('/', embed)
 app.route('/api', api)

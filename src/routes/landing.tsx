@@ -13,12 +13,12 @@ app.get('/', async (c) => {
   return c.html(
     <Layout fullHeight hideChrome>
       {raw(`<style>
-        html, body { color-scheme: light; background: #fff; color: #000; }
         .landing {
           display: flex;
           flex: 1;
           min-height: 0;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          position: relative;
         }
 
         /* ── Left column — single CSS grid ── */
@@ -32,8 +32,8 @@ app.get('/', async (c) => {
             auto 0fr;     /* join header, join body */
           transition: grid-template-rows 0.4s ease;
           align-content: start;
-          border-left: 2px solid #000;
-          border-right: 2px solid #000;
+          border-left: 2px solid var(--border-strong);
+          border-right: 2px solid var(--border-strong);
         }
 
         /* ── Site title ── */
@@ -43,7 +43,7 @@ app.get('/', async (c) => {
           letter-spacing: -0.03em;
           padding: 1.5rem 2rem;
           line-height: 1.1;
-          color: #000;
+          color: var(--fg);
           text-decoration: none;
           display: block;
         }
@@ -57,13 +57,13 @@ app.get('/', async (c) => {
           padding: 1.1rem 2rem;
           background: none;
           border: none;
-          border-top: 2px solid #000;
+          border-top: 2px solid var(--border-strong);
           cursor: pointer;
           font-family: 'Inter', sans-serif;
           font-size: 2.8rem;
           font-weight: 700;
           letter-spacing: -0.03em;
-          color: #000;
+          color: var(--fg);
           text-align: left;
           line-height: 1.15;
         }
@@ -71,7 +71,7 @@ app.get('/', async (c) => {
           flex-shrink: 0;
           width: 36px;
           height: 36px;
-          border: 1.5px solid #000;
+          border: 1.5px solid var(--border-strong);
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -80,7 +80,7 @@ app.get('/', async (c) => {
         .accordion-toggle svg {
           width: 16px;
           height: 16px;
-          stroke: #000;
+          stroke: var(--fg);
           stroke-width: 2;
           fill: none;
         }
@@ -97,7 +97,7 @@ app.get('/', async (c) => {
           font-size: 1.15rem;
           font-weight: 400;
           line-height: 1.55;
-          color: #000;
+          color: var(--fg);
           max-width: 42ch;
         }
 
@@ -105,36 +105,36 @@ app.get('/', async (c) => {
         .member-list { list-style: none; padding-left: 0; }
         .member-list li {
           padding: 0.6rem 0;
-          border-bottom: 1px solid #ddd;
+          border-bottom: 1px solid var(--border);
           display: flex;
           justify-content: space-between;
           align-items: baseline;
         }
-        .member-list li:first-child { border-top: 1px solid #ddd; }
+        .member-list li:first-child { border-top: 1px solid var(--border); }
         .member-list-name {
           font-size: 1rem;
           font-weight: 600;
-          color: #000;
+          color: var(--fg);
           text-decoration: none;
         }
-        .member-list-name:hover { color: #c22; }
+        .member-list-name:hover { color: var(--accent); }
         .member-list-meta {
           font-size: 0.8rem;
           font-weight: 400;
-          color: #888;
+          color: var(--fg-muted);
         }
 
         /* ── Join section ── */
         .join-text {
           font-size: 1.05rem;
           line-height: 1.55;
-          color: #000;
+          color: var(--fg);
           margin-bottom: 1rem;
         }
         .join-link {
           font-size: 0.9rem;
           font-weight: 700;
-          color: #c22;
+          color: var(--accent);
           text-decoration: none;
         }
         .join-link:hover { opacity: 0.7; }
@@ -164,12 +164,32 @@ app.get('/', async (c) => {
           font-family: 'Inter', sans-serif;
           font-size: 0.8rem;
           font-weight: 500;
-          color: #000;
+          color: var(--fg);
           letter-spacing: 0.01em;
         }
         .drag-hint-arrow {
           font-size: 1rem;
         }
+
+        /* ── Landing theme toggle ── */
+        .landing-theme-toggle {
+          position: absolute;
+          top: 1.5rem;
+          right: 1.5rem;
+          background: none;
+          border: 1.5px solid var(--border-strong);
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--fg);
+          transition: opacity 0.2s;
+          z-index: 10;
+        }
+        .landing-theme-toggle:hover { opacity: 0.6; }
 
         /* ── Responsive ── */
         @media (max-width: 767px) {
@@ -177,7 +197,7 @@ app.get('/', async (c) => {
           .landing-left {
             border-left: none;
             border-right: none;
-            border-bottom: 2px solid #000;
+            border-bottom: 2px solid var(--border-strong);
             /* all bodies collapsed on mobile by default, JS overrides */
             grid-template-rows:
               auto
@@ -195,10 +215,13 @@ app.get('/', async (c) => {
             min-height: 50vh;
           }
           .landing-right img { max-width: 200px; }
+          .landing-theme-toggle { top: 1.2rem; right: 1rem; width: 30px; height: 30px; }
+          .landing-theme-toggle svg { width: 14px; height: 14px; }
         }
       </style>`)}
       {raw(`<noscript><style>.landing-left { grid-template-rows: auto auto 1fr auto 1fr auto 1fr !important; } .accordion-toggle { display: none; }</style></noscript>`)}
       <div class="landing">
+        {raw(`<button class="landing-theme-toggle" onclick="__toggleTheme()" aria-label="Toggle theme"><svg class="theme-icon-moon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="theme-icon-sun" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></button>`)}
         <div class="landing-left" id="landing-left">
           <a href="/" class="landing-title">webring.ca</a>
 
