@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { runHealthCheck, detectWidget } from '../cron/healthcheck'
+import { runHealthCheck } from '../cron/healthcheck'
+import { detectWidget } from '../utils/widget'
 import { createMockKV } from './kv-mock'
 import type { Member, HealthStatus } from '../types'
 

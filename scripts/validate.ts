@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { resolve } from 'node:path'
-import { detectWidget } from '../src/cron/healthcheck'
+import { detectWidget } from '../src/utils/widget'
 
 /**
  * Input schema for new member submissions.

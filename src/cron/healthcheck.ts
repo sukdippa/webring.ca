@@ -1,5 +1,6 @@
 import type { HealthStatus } from '../types'
 import { getMembers, setMembers, getHealthStatus, setHealthStatus } from '../data'
+import { detectWidget } from '../utils/widget'
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -9,17 +10,12 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0',
 ]
 
-export function detectWidget(html: string): boolean {
-  const stripped = html.toLowerCase().replace(/<!--[\s\S]*?-->/g, '')
-  const hasMarker = stripped.includes('data-webring="ca"') || stripped.includes('webring.ca/embed.js')
-  const hasPrev = /href=["'][^"']*webring\.ca\/prev\//.test(stripped)
-  const hasNext = /href=["'][^"']*webring\.ca\/next\//.test(stripped)
-  return hasMarker && hasPrev && hasNext
+function randomUA(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
 }
 
 export async function runHealthCheck(kv: KVNamespace): Promise<void> {
   const members = await getMembers(kv)
-  const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
 
   const prevStatuses = await Promise.all(
     members.map((m) => getHealthStatus(kv, m.slug))
@@ -31,7 +27,7 @@ export async function runHealthCheck(kv: KVNamespace): Promise<void> {
       try {
         const res = await fetch(member.url, {
           signal: AbortSignal.timeout(5000),
-          headers: { 'User-Agent': ua },
+          headers: { 'User-Agent': randomUA() },
         })
         const body = await res.text()
         const hasWidget = detectWidget(body)
