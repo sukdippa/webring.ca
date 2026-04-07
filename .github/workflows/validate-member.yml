@@ -3,7 +3,7 @@ name: Validate New Member
 on:
   pull_request_target:
     paths:
-      - 'members.json'
+      - 'members/*.json'
 
 jobs:
   validate:
@@ -15,10 +15,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Overlay PR members.json
+      - name: Overlay PR member files
         run: |
           git fetch origin pull/${{ github.event.pull_request.number }}/head
-          git show ${{ github.event.pull_request.head.sha }}:members.json > members.json
+          for file in $(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} -- 'members/*.json'); do
+            git show ${{ github.event.pull_request.head.sha }}:"$file" > "$file" 2>/dev/null || rm -f "$file"
+          done
 
       - uses: actions/setup-node@v4
         with:

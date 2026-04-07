@@ -5,18 +5,17 @@ A webring for Canadian builders — developers, designers, and founders sharing 
 ## Join the ring
 
 1. Add the webring widget to your site (see below)
-2. Fork this repo and add yourself to `members.json`:
+2. Fork this repo and create `members/your-slug.json`:
    ```json
    {
-     "slug": "your-name",
      "name": "Your Name",
      "url": "https://yoursite.ca",
      "city": "Toronto",
      "active": true
    }
    ```
-   Append your entry to the **bottom** of the array.
-3. Open a pull request — CI will verify your site and we'll merge you in
+   The filename is your slug (e.g., `jane-doe.json`). Lowercase, hyphens only.
+3. Open a pull request -- CI will verify your site and we'll merge you in
 
 **Requirements:** A personal site or project by a Canadian builder, with real content and the webring widget installed.
 
@@ -95,7 +94,7 @@ npm run seed       # prints wrangler commands to run
 ```
 
 The seed step now uses committed repo data only. Every member must already have resolvable coordinates from either:
-- explicit `lat`/`lng` in `members.json`, or
+- explicit `lat`/`lng` in the member's JSON file, or
 - a city covered by the committed city map
 
 If a contributor adds a city that is not yet covered, a maintainer can enrich coordinates locally before merge:

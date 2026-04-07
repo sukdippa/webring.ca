@@ -30,8 +30,8 @@ A webring for Canadian builders (developers, designers, founders). Hosted on Clo
 
 ## Data Flow
 
-1. `members.json` in repo root is the canonical member list
-2. `scripts/seed.ts` syncs `members.json` → KV
+1. `members/*.json` -- each member has their own file (slug is the filename)
+2. `scripts/seed.ts` reads all member files, enriches coordinates, syncs to KV
 3. Routes read from KV via `src/data.ts`
 4. Health check cron writes status to KV via `src/data.ts`
 5. Shuffle cron writes ring order to KV via `src/data.ts`

@@ -32,7 +32,7 @@ jobs:
       - name: Check if Worker code changed
         id: check
         run: |
-          if git diff --name-only HEAD~1 HEAD | grep -qvE '^members\.json$'; then
+          if git diff --name-only HEAD~1 HEAD | grep -qvE '^members/'; then
             echo "worker_changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "worker_changed=false" >> "$GITHUB_OUTPUT"

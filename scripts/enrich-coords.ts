@@ -1,37 +1,40 @@
-import { readFileSync, writeFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { resolve, join, basename } from 'node:path'
 import { geocodeCity } from './geocode'
 import { getMemberCoordinates } from '../src/utils/member-coords'
-import type { Member } from '../src/types'
 
-const membersPath = resolve(import.meta.dirname!, '..', 'members.json')
-const members = JSON.parse(readFileSync(membersPath, 'utf-8')) as Member[]
+const membersDir = resolve(import.meta.dirname!, '..', 'members')
+const files = readdirSync(membersDir).filter((f) => f.endsWith('.json'))
 
 let updated = 0
 
-for (const member of members) {
+for (const file of files) {
+  const slug = basename(file, '.json')
+  const filePath = join(membersDir, file)
+  const member = { slug, ...JSON.parse(readFileSync(filePath, 'utf-8')) }
+
   if (getMemberCoordinates(member)) {
     continue
   }
 
   if (!member.city) {
-    process.stderr.write(`Skipping ${member.slug}: no city or coordinates available.\n`)
+    process.stderr.write(`Skipping ${slug}: no city or coordinates available.\n`)
     continue
   }
 
   const coords = await geocodeCity(member.city)
   if (!coords) {
-    process.stderr.write(`Could not resolve ${member.slug} (${member.city}). Add lat/lng manually.\n`)
+    process.stderr.write(`Could not resolve ${slug} (${member.city}). Add lat/lng manually.\n`)
     continue
   }
 
-  member.lat = coords.lat
-  member.lng = coords.lng
+  const data = JSON.parse(readFileSync(filePath, 'utf-8'))
+  data.lat = coords.lat
+  data.lng = coords.lng
+  writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n')
   updated += 1
-  process.stdout.write(`Resolved ${member.slug} (${member.city}) -> ${coords.lat}, ${coords.lng}\n`)
+  process.stdout.write(`Resolved ${slug} (${member.city}) -> ${coords.lat}, ${coords.lng}\n`)
 }
-
-writeFileSync(membersPath, JSON.stringify(members, null, 2) + '\n')
 
 process.stdout.write(updated > 0
   ? `Updated coordinates for ${updated} member${updated === 1 ? '' : 's'}.\n`

@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync } from 'node:fs'
-import { resolve, join } from 'node:path'
+import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { resolve, join, basename } from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { fisherYatesShuffle } from '../src/utils/shuffle'
@@ -8,9 +8,14 @@ import { getMemberCoordinates } from '../src/utils/member-coords'
 const remote = process.argv.includes('--remote')
 const preview = process.argv.includes('--preview')
 
-const membersPath = resolve(import.meta.dirname!, '..', 'members.json')
-const raw = readFileSync(membersPath, 'utf-8')
-const members = JSON.parse(raw)
+const membersDir = resolve(import.meta.dirname!, '..', 'members')
+const members = readdirSync(membersDir)
+  .filter((f) => f.endsWith('.json'))
+  .map((f) => {
+    const slug = basename(f, '.json')
+    const data = JSON.parse(readFileSync(join(membersDir, f), 'utf-8'))
+    return { slug, ...data }
+  })
 
 for (const member of members) {
   const coords = getMemberCoordinates(member)

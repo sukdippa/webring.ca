@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { resolve } from 'node:path'
+import { resolve, join, basename } from 'node:path'
 import { detectWidget } from '../src/utils/widget'
 import { hasResolvableMemberCoordinates } from '../src/utils/member-coords'
 
@@ -12,7 +12,7 @@ interface MemberInput {
   active?: boolean
 }
 
-const ALLOWED_KEYS = new Set(['slug', 'name', 'url', 'city', 'active', 'lat', 'lng'])
+const ALLOWED_KEYS = new Set(['name', 'url', 'city', 'active', 'lat', 'lng'])
 
 function sanitize(text: string): string {
   return text.replace(/[[\](){}*_~`#>!|\\]/g, '\\$&')
@@ -22,30 +22,46 @@ function write(text: string): void {
   process.stdout.write(text + '\n')
 }
 
-// ── Load current members ──
-const membersPath = resolve(import.meta.dirname!, '..', 'members.json')
+// ── Load current members from members/ directory ──
+const membersDir = resolve(import.meta.dirname!, '..', 'members')
 
-let members: MemberInput[]
-try {
-  members = JSON.parse(readFileSync(membersPath, 'utf-8'))
-} catch {
-  write('## Webring Validation\n')
-  write('members.json is not valid JSON')
-  process.exit(1)
+function loadMembersFromDir(dir: string): MemberInput[] {
+  try {
+    return readdirSync(dir)
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => {
+        const slug = basename(f, '.json')
+        const data = JSON.parse(readFileSync(join(dir, f), 'utf-8'))
+        return { slug, ...data }
+      })
+  } catch {
+    return []
+  }
 }
+
+const members = loadMembersFromDir(membersDir)
 
 // ── Load base members ──
 let baseMembers: MemberInput[] = []
 try {
   const ref = process.env.PR_BASE_SHA
     || (process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : 'main')
-  const base = execFileSync('git', ['show', `${ref}:members.json`], {
+  const listing = execFileSync('git', ['ls-tree', '--name-only', `${ref}:members/`], {
     encoding: 'utf-8',
     stdio: ['pipe', 'pipe', 'pipe'],
   })
-  baseMembers = JSON.parse(base)
+  baseMembers = listing.trim().split('\n')
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
+      const slug = basename(f, '.json')
+      const raw = execFileSync('git', ['show', `${ref}:members/${f}`], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      })
+      return { slug, ...JSON.parse(raw) }
+    })
 } catch {
-  // No base — first time, all members are new
+  // No base -- first time, all members are new
 }
 
 // ── Diff: new, removed, edited ──
@@ -77,12 +93,6 @@ if (newMembers.length === 0 && removedMembers.length === 0 && editedMembers.leng
 }
 
 // ── Validate ──
-const survivingBaseCount = members.filter((m) => baseSlugs.has(m.slug)).length
-const appendedCorrectly = newMembers.every((nm) => {
-  const idx = members.findIndex((m) => m.slug === nm.slug)
-  return idx >= survivingBaseCount
-})
-
 let hasFailure = false
 const allSlugs = new Set<string>()
 const allUrls = new Set<string>()
@@ -113,17 +123,12 @@ for (const { current, base, changedFields } of editedMembers) {
   for (const field of changedFields) {
     const oldVal = sanitize(String(base[field as keyof MemberInput] ?? ''))
     const newVal = sanitize(String(current[field as keyof MemberInput] ?? ''))
-    write(`- INFO: \`${field}\` changed: "${oldVal}" → "${newVal}"`)
+    write(`- INFO: \`${field}\` changed: "${oldVal}" -> "${newVal}"`)
   }
 
   // Re-validate changed fields
   if (changedFields.includes('name') && !current.name) {
     write('- FAIL: name cannot be empty')
-    memberFailed = true
-  }
-
-  if (changedFields.includes('slug') && !/^[a-z0-9-]+$/.test(current.slug)) {
-    write(`- FAIL: slug "${sanitize(current.slug)}" must be lowercase alphanumeric and hyphens only`)
     memberFailed = true
   }
 
@@ -147,7 +152,7 @@ for (const { current, base, changedFields } of editedMembers) {
           if (detectWidget(body, current.slug)) {
             write('- PASS: Webring widget detected')
           } else {
-            write('- FAIL: Widget not detected on new URL. Install the widget before merging — see https://github.com/stanleypangg/webring.ca#add-the-widget')
+            write('- FAIL: Widget not detected on new URL. Install the widget before merging -- see https://github.com/stanleypangg/webring.ca#add-the-widget')
             memberFailed = true
           }
         } else {
@@ -180,24 +185,24 @@ for (const member of newMembers) {
 
   write('**Schema**')
 
-  if (!member.slug || !member.name || !member.url || member.active === undefined) {
-    write('- FAIL: Missing required fields. Every entry needs slug, name, url, and active.')
+  if (!member.name || !member.url || member.active === undefined) {
+    write('- FAIL: Missing required fields. Every entry needs name, url, and active.')
     memberFailed = true
   } else {
-    write('- PASS: All required fields present (slug, name, url, active)')
+    write('- PASS: All required fields present (name, url, active)')
   }
 
-  const unknownKeys = Object.keys(member).filter((k) => !ALLOWED_KEYS.has(k))
+  const unknownKeys = Object.keys(member).filter((k) => k !== 'slug' && !ALLOWED_KEYS.has(k))
   if (unknownKeys.length > 0) {
     write(`- FAIL: Unknown fields: ${unknownKeys.map((k) => `"${sanitize(k)}"`).join(', ')}. Allowed fields: ${[...ALLOWED_KEYS].join(', ')}`)
     memberFailed = true
   }
 
-  if (member.slug && !/^[a-z0-9-]+$/.test(member.slug)) {
-    write(`- FAIL: slug "${sanitize(member.slug)}" must be lowercase alphanumeric and hyphens only (e.g. "jane-doe")`)
+  if (!/^[a-z0-9-]+$/.test(member.slug)) {
+    write(`- FAIL: filename "${sanitize(member.slug)}.json" must be lowercase alphanumeric and hyphens only (e.g. "jane-doe.json")`)
     memberFailed = true
-  } else if (member.slug) {
-    write(`- PASS: slug "${sanitize(member.slug)}" is valid`)
+  } else {
+    write(`- PASS: filename "${sanitize(member.slug)}.json" is valid`)
   }
 
   if (member.url && !member.url.startsWith('https://')) {
@@ -207,18 +212,13 @@ for (const member of newMembers) {
     write('- PASS: URL uses HTTPS')
   }
 
-  if (member.slug && allSlugs.has(member.slug)) {
+  if (allSlugs.has(member.slug)) {
     write(`- FAIL: slug "${sanitize(member.slug)}" is already taken by another member`)
     memberFailed = true
   }
 
   if (member.url && allUrls.has(member.url)) {
     write(`- FAIL: URL "${safeUrl}" is already registered to another member`)
-    memberFailed = true
-  }
-
-  if (!appendedCorrectly) {
-    write('- FAIL: New entries must be appended to the bottom of the members array, not inserted in the middle')
     memberFailed = true
   }
 
@@ -243,7 +243,7 @@ for (const member of newMembers) {
       if (detectWidget(body, member.slug)) {
         write('- PASS: Webring widget detected')
       } else {
-        write('- FAIL: Widget not detected. Install the widget before merging — see https://github.com/stanleypangg/webring.ca#add-the-widget')
+        write('- FAIL: Widget not detected. Install the widget before merging -- see https://github.com/stanleypangg/webring.ca#add-the-widget')
         memberFailed = true
       }
     } else {

@@ -24,7 +24,7 @@ export function JoinContent({ memberCount }: { memberCount: number }) {
           </div>
           <div class="join-step">
             <span class="join-step-num">02</span>
-            <span class="join-step-text">Add yourself to members.json</span>
+            <span class="join-step-text">Create your member file</span>
           </div>
           <div class="join-step">
             <span class="join-step-num">03</span>
